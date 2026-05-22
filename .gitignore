@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+backend/static/uploads/*
+!backend/static/uploads/.gitkeep
+backend/data/
+*.db
+
+# Node
+node_modules/
+.next/
+out/
+
+# Env
+.env
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OMC
+.omc/
