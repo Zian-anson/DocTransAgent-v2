@@ -26,18 +26,6 @@ class GMIClient:
             timeout=120.0,
             max_retries=2,
         )
-        # Separate embedding client via SiliconFlow
-        if settings.sf_api_key:
-            self.embed_client = AsyncOpenAI(
-                api_key=settings.sf_api_key,
-                base_url=settings.sf_base_url,
-                timeout=30.0,
-                max_retries=2,
-            )
-            self.embed_model = settings.sf_embed_model
-        else:
-            self.embed_client = self.client
-            self.embed_model = settings.llm_embed
         self.models = {
             "translate": settings.llm_translate,
             "qa": settings.llm_qa,
