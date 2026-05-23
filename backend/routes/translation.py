@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Document, DocStatus, UsageLog
-from services.parser import parse_document
+from services.parser import parse_document, detect_language
 from services.translator import translator
 from services.glossary_service import get_glossary_dict
 from config import get_settings
@@ -15,19 +15,30 @@ settings = get_settings()
 
 
 @router.post("/{doc_id}")
-async def start_translation(doc_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """Start async translation for a document. Returns immediately."""
+async def start_translation(
+    doc_id: str,
+    background_tasks: BackgroundTasks,
+    target_lang: str = None,
+    db: Session = Depends(get_db),
+):
+    """Start async translation for a document. Returns immediately.
+
+    Optional `target_lang` query param overrides the language chosen at upload.
+    """
     doc = db.query(Document).filter(Document.id == doc_id).first()
     if not doc:
         raise HTTPException(404, "Document not found")
     if doc.status not in (DocStatus.UPLOADED, DocStatus.PARSED):
         raise HTTPException(400, f"Document is in status {doc.status.value}, cannot translate")
 
+    if target_lang and target_lang != doc.target_lang:
+        doc.target_lang = target_lang
+
     background_tasks.add_task(_run_translation_pipeline, doc_id)
     doc.status = DocStatus.TRANSLATING
     db.commit()
 
-    return {"doc_id": doc_id, "status": "translation_started"}
+    return {"doc_id": doc_id, "status": "translation_started", "target_lang": doc.target_lang}
 
 
 @router.get("/{doc_id}/progress")
@@ -72,6 +83,13 @@ async def _run_translation_pipeline(doc_id: str):
         doc.sections = parsed["sections"]
         doc.word_count = parsed["word_count"]
         doc.parsed_content = parsed["full_text"]
+
+        # Auto-detect source language if marked as 'auto'
+        if (doc.source_lang or "").lower() == "auto":
+            detected = detect_language(parsed["full_text"], default="en")
+            logger.info(f"Auto-detected source language for {doc_id}: {detected}")
+            doc.source_lang = detected
+
         doc.status = DocStatus.PARSED
         db.commit()
 

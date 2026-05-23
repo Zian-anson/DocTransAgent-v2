@@ -6,11 +6,35 @@ import { documentsApi, translationApi, kbApi } from "@/lib/api";
 import { StatusBadge } from "@/components/Badges";
 import { useTranslationProgress } from "@/hooks/useTranslationProgress";
 
+const LANG_OPTIONS: { code: string; label: string }[] = [
+  { code: "en", label: "English" },
+  { code: "zh", label: "中文" },
+  { code: "ja", label: "日本語" },
+  { code: "ko", label: "한국어" },
+  { code: "fr", label: "Français" },
+  { code: "de", label: "Deutsch" },
+  { code: "es", label: "Español" },
+  { code: "pt", label: "Português" },
+  { code: "ar", label: "العربية" },
+  { code: "ru", label: "Русский" },
+];
+
+const LANG_LABEL: Record<string, string> = Object.fromEntries(
+  LANG_OPTIONS.map((l) => [l.code, l.label])
+);
+
+function langDisplay(code?: string): string {
+  if (!code) return "-";
+  if (code.toLowerCase() === "auto") return "自动检测";
+  return LANG_LABEL[code.toLowerCase()] || code.toUpperCase();
+}
+
 export default function UploadPage() {
   const [docs, setDocs] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [translatingIds, setTranslatingIds] = useState<Set<string>>(new Set());
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
+  const [targetLangs, setTargetLangs] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const { progress, startPolling } = useTranslationProgress(activeDocId);
@@ -76,8 +100,9 @@ export default function UploadPage() {
     if (translatingIds.has(docId)) return;
     setTranslatingIds((current) => new Set(current).add(docId));
     setActiveDocId(docId);
+    const targetLang = targetLangs[docId];
     try {
-      await translationApi.start(docId);
+      await translationApi.start(docId, targetLang);
       startPolling(docId);
       loadDocs();
       pollDocStatus(docId, "translated");
@@ -174,12 +199,16 @@ export default function UploadPage() {
                 <th className="text-left py-3 px-3 font-medium" style={{ color: "var(--text-muted)" }}>文件名</th>
                 <th className="text-left py-3 px-3 font-medium" style={{ color: "var(--text-muted)" }}>类型</th>
                 <th className="text-left py-3 px-3 font-medium" style={{ color: "var(--text-muted)" }}>字数</th>
+                <th className="text-left py-3 px-3 font-medium" style={{ color: "var(--text-muted)" }}>源语言</th>
                 <th className="text-left py-3 px-3 font-medium" style={{ color: "var(--text-muted)" }}>状态</th>
                 <th className="text-right py-3 px-3 font-medium" style={{ color: "var(--text-muted)" }}>操作</th>
               </tr>
             </thead>
             <tbody>
-              {docs.slice((page - 1) * pageSize, page * pageSize).map((doc) => (
+              {docs.slice((page - 1) * pageSize, page * pageSize).map((doc) => {
+                const canTranslate = ["uploaded", "parsed"].includes(doc.status);
+                const selectedTarget = targetLangs[doc.id] || doc.target_lang || "en";
+                return (
                 <tr key={doc.id} className="border-b transition-colors hover:bg-white/5" style={{ borderColor: "var(--border)" }}>
                   <td className="py-3 px-3 font-medium">{doc.filename}</td>
                   <td className="py-3 px-3">
@@ -188,9 +217,34 @@ export default function UploadPage() {
                   <td className="py-3 px-3 text-sm" style={{ color: "var(--text-muted)" }}>
                     {doc.word_count?.toLocaleString() ?? "-"}
                   </td>
+                  <td className="py-3 px-3 text-xs" style={{ color: "var(--text-muted)" }}>
+                    {langDisplay(doc.source_lang)}
+                  </td>
                   <td className="py-3 px-3"><StatusBadge status={doc.status} /></td>
                   <td className="py-3 px-3">
-                    <div className="flex justify-end gap-1.5">
+                    <div className="flex justify-end items-center gap-1.5">
+                      {canTranslate && (
+                        <>
+                          <span className="text-xs opacity-50">→</span>
+                          <select
+                            value={selectedTarget}
+                            onChange={(e) =>
+                              setTargetLangs((cur) => ({ ...cur, [doc.id]: e.target.value }))
+                            }
+                            disabled={translatingIds.has(doc.id)}
+                            className="text-xs rounded-md px-2 py-1 border"
+                            style={{
+                              background: "var(--bg-input)",
+                              borderColor: "var(--border)",
+                              color: "var(--text)",
+                            }}
+                          >
+                            {LANG_OPTIONS.map((l) => (
+                              <option key={l.code} value={l.code}>{l.label}</option>
+                            ))}
+                          </select>
+                        </>
+                      )}
                       {["uploaded", "parsed", "translating", "parsing"].includes(doc.status) && (
                         <button
                           onClick={() => handleTranslate(doc.id)}
@@ -224,7 +278,7 @@ export default function UploadPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         )}

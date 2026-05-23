@@ -16,11 +16,14 @@ settings = get_settings()
 @router.post("/upload")
 async def upload_document(
     file: UploadFile = File(...),
-    source_lang: str = "zh",
+    source_lang: str = "auto",
     target_lang: str = "en",
     db: Session = Depends(get_db),
 ):
-    """Upload a document for translation and knowledge base indexing."""
+    """Upload a document for translation and knowledge base indexing.
+
+    `source_lang="auto"` triggers automatic language detection during the parse step.
+    """
     ext = os.path.splitext(file.filename or "unknown.txt")[1].lower().lstrip(".")
     if ext not in ("pdf", "docx", "md", "txt"):
         raise HTTPException(400, f"Unsupported file type: {ext}")

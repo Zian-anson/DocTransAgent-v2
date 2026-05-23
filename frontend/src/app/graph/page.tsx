@@ -64,10 +64,10 @@ export default function GraphExplorePage() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>
-          Graph Explorer
+          图谱探索
         </h1>
         <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
-          {stats ? `${stats.nodes_total} nodes, ${stats.edges_total} edges` : "Explore the knowledge graph"}
+          {stats ? `${stats.nodes_total} 个节点 · ${stats.edges_total} 条边` : "探索知识图谱"}
         </p>
       </div>
 
@@ -77,7 +77,7 @@ export default function GraphExplorePage() {
           type="text"
           value={searchQ}
           onChange={(e) => { setSearchQ(e.target.value); setOffset(0); }}
-          placeholder="Search nodes by label..."
+          placeholder="按节点名称搜索..."
           className="flex-1 px-4 py-2.5 rounded-lg text-sm border"
           style={{
             background: "var(--bg-card)",
@@ -97,7 +97,7 @@ export default function GraphExplorePage() {
         >
           {NODE_TYPES.map((t) => (
             <option key={t} value={t}>
-              {t || "All types"}
+              {t || "全部类型"}
             </option>
           ))}
         </select>
@@ -114,20 +114,20 @@ export default function GraphExplorePage() {
               className="px-4 py-3 border-b text-sm font-medium"
               style={{ borderColor: "var(--border)", color: "var(--text)" }}
             >
-              Nodes {total > 0 && `(${total})`}
+              节点 {total > 0 && `(${total})`}
             </div>
 
             {loading && (
               <div className="px-4 py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>
-                Loading...
+                加载中...
               </div>
             )}
 
             {!loading && nodes.length === 0 && (
               <div className="px-4 py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>
                 {stats?.nodes_total === 0
-                  ? "No graph data. Import an Obsidian vault first."
-                  : "No nodes match your search."}
+                  ? "暂无图谱数据，请先导入 Obsidian 笔记库。"
+                  : "没有匹配的节点。"}
               </div>
             )}
 
@@ -170,7 +170,7 @@ export default function GraphExplorePage() {
                   className="text-xs px-3 py-1 rounded transition-colors disabled:opacity-30"
                   style={{ color: "var(--primary)" }}
                 >
-                  Previous
+                  上一页
                 </button>
                 <span className="text-xs" style={{ color: "var(--text-muted)" }}>
                   {currentPage} / {totalPages}
@@ -181,7 +181,7 @@ export default function GraphExplorePage() {
                   className="text-xs px-3 py-1 rounded transition-colors disabled:opacity-30"
                   style={{ color: "var(--primary)" }}
                 >
-                  Next
+                  下一页
                 </button>
               </div>
             )}
@@ -196,7 +196,7 @@ export default function GraphExplorePage() {
               style={{ background: "var(--bg-card)", borderColor: "var(--border)" }}
             >
               <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                Select a node to view details and neighborhood
+                选择一个节点以查看详情和邻居关系
               </p>
             </div>
           ) : (
@@ -220,14 +220,14 @@ export default function GraphExplorePage() {
 
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span style={{ color: "var(--text-muted)" }}>Stable Key</span>
+                    <span style={{ color: "var(--text-muted)" }}>节点标识</span>
                     <div className="font-mono text-xs mt-0.5 break-all" style={{ color: "var(--text)" }}>
                       {selectedNode.node.stable_key}
                     </div>
                   </div>
                   {selectedNode.node.metadata?.relative_path && (
                     <div>
-                      <span style={{ color: "var(--text-muted)" }}>Source Path</span>
+                      <span style={{ color: "var(--text-muted)" }}>源文件路径</span>
                       <div className="text-xs mt-0.5" style={{ color: "var(--text)" }}>
                         {selectedNode.node.metadata.relative_path}
                       </div>
@@ -235,7 +235,7 @@ export default function GraphExplorePage() {
                   )}
                   {selectedNode.node.content_snippet && (
                     <div className="col-span-2">
-                      <span style={{ color: "var(--text-muted)" }}>Content Preview</span>
+                      <span style={{ color: "var(--text-muted)" }}>内容预览</span>
                       <div
                         className="text-xs mt-0.5 p-3 rounded-lg leading-relaxed"
                         style={{ background: "var(--bg)", color: "var(--text)" }}
@@ -250,10 +250,10 @@ export default function GraphExplorePage() {
                 <div className="mt-4 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
                   <div className="flex gap-4 text-xs">
                     <span style={{ color: "var(--text-muted)" }}>
-                      Outgoing: {selectedNode.outgoing_edges?.length || 0}
+                      出边：{selectedNode.outgoing_edges?.length || 0}
                     </span>
                     <span style={{ color: "var(--text-muted)" }}>
-                      Incoming: {selectedNode.incoming_edges?.length || 0}
+                      入边：{selectedNode.incoming_edges?.length || 0}
                     </span>
                   </div>
                 </div>
@@ -266,12 +266,12 @@ export default function GraphExplorePage() {
                   style={{ background: "var(--bg-card)", borderColor: "var(--border)" }}
                 >
                   <h4 className="font-semibold text-sm mb-4" style={{ color: "var(--text)" }}>
-                    Neighborhood ({neighborhood.neighbor_count} neighbors, {neighborhood.edge_count} edges)
+                    邻居关系（{neighborhood.neighbor_count} 个邻居 · {neighborhood.edge_count} 条边）
                   </h4>
 
                   {neighborhood.neighbors.length === 0 ? (
                     <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      This node has no connections.
+                      此节点暂无连接。
                     </p>
                   ) : (
                     <div className="space-y-1">

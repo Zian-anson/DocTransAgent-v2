@@ -118,7 +118,7 @@ def _reassemble_sections(chunk_results: List[dict]) -> List[dict]:
         chunks_list = lookup[key]
         display_heading = key.split("___")[0] if "___" in key else key
         content = "\n\n".join(
-            c.get("translated_content", c.get("content", ""))
+            (c.get("translated_content") or c.get("content") or "")
             for c in sorted(chunks_list, key=lambda x: x["chunk_index"])
         )
         result.append({

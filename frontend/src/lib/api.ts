@@ -24,7 +24,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ── Documents ──────────────────────────────────────────
 export const documentsApi = {
-  upload: async (file: File, sourceLang = "zh", targetLang = "en") => {
+  upload: async (file: File, sourceLang = "auto", targetLang = "en") => {
     const form = new FormData();
     form.append("file", file);
     const res = await fetch(
@@ -41,8 +41,10 @@ export const documentsApi = {
 
 // ── Translation ────────────────────────────────────────
 export const translationApi = {
-  start: (docId: string) =>
-    request<any>(`/api/translate/${docId}`, { method: "POST" }),
+  start: (docId: string, targetLang?: string) => {
+    const qs = targetLang ? `?target_lang=${encodeURIComponent(targetLang)}` : "";
+    return request<any>(`/api/translate/${docId}${qs}`, { method: "POST" });
+  },
   progress: (docId: string) => request<any>(`/api/translate/${docId}/progress`),
 };
 
@@ -106,6 +108,17 @@ export const obsidianApi = {
       method: "POST",
       body: JSON.stringify({ vault_path: vaultPath, source_lang: sourceLang, target_lang: targetLang }),
     }),
+  uploadFiles: async (files: FileList | File[], sourceLang = "zh", targetLang = "en") => {
+    const form = new FormData();
+    const fileArray = Array.from(files);
+    fileArray.forEach((f) => form.append("files", f));
+    const res = await fetch(
+      `${BASE_URL}/api/sources/obsidian/upload?source_lang=${sourceLang}&target_lang=${targetLang}`,
+      { method: "POST", body: form }
+    );
+    if (!res.ok) throw new Error("Upload failed");
+    return res.json();
+  },
   listImports: () => request<any>("/api/sources/imports"),
   getImport: (importId: string) => request<any>(`/api/sources/imports/${importId}`),
   promoteDocument: (docId: string) =>

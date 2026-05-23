@@ -67,8 +67,11 @@ class GMIClient:
         )
         elapsed = (time.monotonic() - t0) * 1000
         choice = resp.choices[0]
+        translated_text = choice.message.content or ""
+        if not translated_text.strip():
+            logger.warning(f"Empty translation returned by model for text starting: {text[:80]!r}")
         result = {
-            "translated_text": choice.message.content,
+            "translated_text": translated_text,
             "model": self.models["translate"],
             "tokens_input": resp.usage.prompt_tokens if resp.usage else 0,
             "tokens_output": resp.usage.completion_tokens if resp.usage else 0,

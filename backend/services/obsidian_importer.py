@@ -207,6 +207,7 @@ def import_obsidian_vault(
                         "word_count": len(parsed.body_text.split()) if parsed.body_text else 0,
                     },
                 )
+                db.flush()  # ensure node IDs are available for FK references
                 node_count += 1
 
                 # Headings → HEADING nodes + CONTAINS edges
@@ -219,6 +220,7 @@ def import_obsidian_vault(
                         label=h.text,
                         metadata={"level": h.level, "line": h.line},
                     )
+                    db.flush()
                     _ensure_edge(
                         db,
                         source_id=note_node.id,
@@ -241,6 +243,7 @@ def import_obsidian_vault(
                             "heading_anchor": wl.heading,
                         },
                     )
+                    db.flush()
                     _ensure_edge(
                         db,
                         source_id=note_node.id,
@@ -259,6 +262,7 @@ def import_obsidian_vault(
                         stable_key=tag_stable,
                         label=f"#{tag_name}",
                     )
+                    db.flush()
                     _ensure_edge(
                         db,
                         source_id=note_node.id,
@@ -276,6 +280,7 @@ def import_obsidian_vault(
                         stable_key=alias_stable,
                         label=alias,
                     )
+                    db.flush()
                     _ensure_edge(
                         db,
                         source_id=alias_node.id,

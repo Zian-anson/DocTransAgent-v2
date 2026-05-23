@@ -1,16 +1,22 @@
 """Obsidian import routes + document-to-graph bridge."""
 import logging
-from fastapi import APIRouter, Depends, HTTPException
+import os
+import shutil
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from pathlib import Path
+from typing import List
 
+from config import get_settings
 from database import get_db
 from services.obsidian_importer import import_obsidian_vault, get_imports, get_import_by_id
 from services.source_identity import index_document_to_graph
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/sources", tags=["sources"])
+settings = get_settings()
 
 
 class ObsidianImportRequest(BaseModel):
@@ -39,6 +45,62 @@ async def obsidian_import(req: ObsidianImportRequest, db: Session = Depends(get_
     except Exception as e:
         logger.error("Import failed: %s", e)
         raise HTTPException(500, f"Import failed: {e}")
+
+    return {
+        "import_id": result.id,
+        "status": result.status,
+        "imported_count": result.imported_count,
+        "source_path": result.source_path,
+        "error_message": result.error_message,
+        "created_at": result.created_at.isoformat() if result.created_at else None,
+        "completed_at": result.completed_at.isoformat() if result.completed_at else None,
+    }
+
+
+@router.post("/obsidian/upload")
+async def obsidian_upload_files(
+    files: List[UploadFile] = File(...),
+    source_lang: str = "zh",
+    target_lang: str = "en",
+    db: Session = Depends(get_db),
+):
+    """Import Markdown files directly (no vault path needed). Upload one or more .md files."""
+    if not files:
+        raise HTTPException(400, "At least one file is required")
+
+    # Create temp directory for this import batch
+    import_id = str(uuid.uuid4())
+    tmp_dir = Path(settings.upload_dir) / "imports" / import_id
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+
+    saved = 0
+    try:
+        for file in files:
+            name = file.filename or "untitled.md"
+            if not name.lower().endswith(".md"):
+                continue
+
+            data = await file.read()
+            file_path = tmp_dir / name
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            file_path.write_bytes(data)
+            saved += 1
+
+        if saved == 0:
+            raise HTTPException(400, "No .md files found in upload")
+
+        result = import_obsidian_vault(db, str(tmp_dir), source_lang, target_lang)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        logger.error("File import failed: %s", e)
+        raise HTTPException(500, f"Import failed: {e}")
+    finally:
+        # Cleanup temp directory
+        try:
+            shutil.rmtree(str(tmp_dir), ignore_errors=True)
+        except Exception:
+            pass
 
     return {
         "import_id": result.id,
