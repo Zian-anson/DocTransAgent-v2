@@ -2,24 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { documentsApi } from "@/lib/api";
+import { documentsApi, type DocumentDetail, type Section } from "@/lib/api";
 import { ModelBadge, StatusBadge } from "@/components/Badges";
-
-interface Section {
-  heading: string;
-  level: number;
-  content: string;
-}
-
-interface TransSection {
-  heading: string;
-  level: number;
-  content: string;
-}
 
 export default function TranslateReviewPage() {
   const { id } = useParams<{ id: string }>();
-  const [doc, setDoc] = useState<any>(null);
+  const [doc, setDoc] = useState<DocumentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<number | null>(null);
   const [showGlossary, setShowGlossary] = useState(true);
@@ -30,7 +18,7 @@ export default function TranslateReviewPage() {
       .get(id as string)
       .then((d) => {
         setDoc(d);
-        if (d.sections?.length > 0) setActiveSection(0);
+        if (d.sections && d.sections.length > 0) setActiveSection(0);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -54,7 +42,7 @@ export default function TranslateReviewPage() {
   }
 
   const sections: Section[] = doc.sections || [];
-  const translated: TransSection[] = doc.translated_sections || [];
+  const translated: Section[] = doc.translated_sections || [];
   const hasTranslation = translated.length > 0;
 
   return (
@@ -172,7 +160,7 @@ export default function TranslateReviewPage() {
                 <div>
                   <div className="text-3xl text-center mb-2">🌐</div>
                   <p className="text-sm">翻译尚未完成</p>
-                  <p className="text-xs mt-1">点击"翻译"按钮开始</p>
+                  <p className="text-xs mt-1">点击&ldquo;翻译&rdquo;按钮开始</p>
                 </div>
               </div>
             )}

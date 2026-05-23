@@ -1,9 +1,7 @@
 """
 Multi-format document parser. Extracts text preserving section hierarchy.
 """
-import io
 import logging
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 

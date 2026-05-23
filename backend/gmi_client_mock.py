@@ -4,7 +4,6 @@ Returns realistic responses so the demo always works.
 Activated when GMI_API_KEY starts with "mock-" or is empty.
 """
 import asyncio
-import time
 from typing import AsyncGenerator
 
 
@@ -33,15 +32,15 @@ class MockGMIClient:
         await asyncio.sleep(0.5)
         return {
             "answer": (
-                f"[MOCK RAG ANSWER via DeepSeek V3]\n\n"
-                f"Based on the provided documents, here is the analysis:\n\n"
-                f"The documents cover key aspects of overseas expansion including "
-                f"product specifications, brand strategy, and compliance requirements. "
-                f"[Source 1] provides technical details, [Source 2] outlines the brand "
-                f"positioning, while [Source 3] covers regulatory compliance.\n\n"
-                f"Key findings: The product meets EU certification requirements "
-                f"(CE, RoHS, REACH) as documented in [Source 1]. The brand strategy "
-                f"[Source 2] targets Southeast Asia and Europe as priority markets."
+                "[MOCK RAG ANSWER via DeepSeek V3]\n\n"
+                "Based on the provided documents, here is the analysis:\n\n"
+                "The documents cover key aspects of overseas expansion including "
+                "product specifications, brand strategy, and compliance requirements. "
+                "[Source 1] provides technical details, [Source 2] outlines the brand "
+                "positioning, while [Source 3] covers regulatory compliance.\n\n"
+                "Key findings: The product meets EU certification requirements "
+                "(CE, RoHS, REACH) as documented in [Source 1]. The brand strategy "
+                "[Source 2] targets Southeast Asia and Europe as priority markets."
             ),
             "model": self.models["qa"],
             "tokens_input": 450,

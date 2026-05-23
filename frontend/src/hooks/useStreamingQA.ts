@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { qaApi } from "@/lib/api";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { qaApi, type Citation } from "@/lib/api";
 
 interface Message {
   role: "user" | "assistant";
@@ -10,20 +10,25 @@ interface Message {
   isLoading?: boolean;
 }
 
-interface Citation {
-  source_index: number;
-  text: string;
-  metadata: Record<string, string>;
-  score: number;
-}
-
 export function useStreamingQA(sessionId = "default") {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Abort any in-flight stream on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
   const ask = useCallback(
     async (question: string) => {
+      // Cancel any previous in-flight stream
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setMessages((prev) => [
         ...prev,
         { role: "user", content: question },
@@ -32,7 +37,12 @@ export function useStreamingQA(sessionId = "default") {
       setIsStreaming(true);
 
       try {
-        const response = await qaApi.askStream(question, sessionId);
+        const response = await qaApi.askStream(
+          question,
+          sessionId,
+          5,
+          controller.signal
+        );
         if (!response.ok) throw new Error("Stream request failed");
 
         const reader = response.body?.getReader();
@@ -67,8 +77,8 @@ export function useStreamingQA(sessionId = "default") {
                     return updated;
                   });
                 }
-                if (data.done) {
-                  setIsStreaming(false);
+                if (data.error) {
+                  throw new Error(data.error);
                 }
               } catch {
                 // skip malformed SSE lines
@@ -77,6 +87,10 @@ export function useStreamingQA(sessionId = "default") {
           }
         }
       } catch (error) {
+        // Ignore abort errors — user initiated
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
         setMessages((prev) => {
           const updated = [...prev];
           const last = updated[updated.length - 1];
@@ -91,15 +105,23 @@ export function useStreamingQA(sessionId = "default") {
         });
       } finally {
         setIsStreaming(false);
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+        }
       }
     },
     [sessionId]
   );
 
+  const stop = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
   const clearMessages = useCallback(() => {
+    abortRef.current?.abort();
     setMessages([]);
     qaApi.clearSession(sessionId);
   }, [sessionId]);
 
-  return { messages, isStreaming, ask, clearMessages };
+  return { messages, isStreaming, ask, stop, clearMessages };
 }

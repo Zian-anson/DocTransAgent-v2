@@ -1,11 +1,11 @@
 """Glossary management routes."""
 import logging
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import get_db
 from services.glossary_service import (
-    get_glossary_dict, add_glossary_entry, list_glossary_entries,
+    add_glossary_entry, list_glossary_entries,
     delete_glossary_entry, auto_extract_glossary,
 )
 

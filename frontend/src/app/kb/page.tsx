@@ -1,20 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { kbApi } from "@/lib/api";
-
-interface SearchResult {
-  chunk_id: string;
-  text: string;
-  metadata: Record<string, string>;
-  score: number;
-}
+import { kbApi, type SearchResult, type KBStats } from "@/lib/api";
 
 export default function KBPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<KBStats | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +53,7 @@ export default function KBPage() {
 
       {/* Results */}
       <div className="space-y-3">
-        {results.map((r, i) => (
+        {results.map((r) => (
           <div key={r.chunk_id} className="card hover:border-indigo-500/30 transition-colors">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">

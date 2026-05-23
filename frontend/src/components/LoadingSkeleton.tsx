@@ -28,14 +28,20 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
 }
 
 export function ChatSkeleton() {
+  // Pre-computed widths to keep render pure (no Math.random)
+  const items: { isUser: boolean; width: number }[] = [
+    { isUser: true, width: 58 },
+    { isUser: false, width: 64 },
+    { isUser: true, width: 47 },
+  ];
   return (
     <div className="space-y-4 animate-pulse">
-      {[true, false, true].map((isUser, i) => (
+      {items.map(({ isUser, width }, i) => (
         <div key={i} className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
           <div
             className="rounded-2xl px-4 py-3"
             style={{
-              width: `${40 + Math.random() * 30}%`,
+              width: `${width}%`,
               background: isUser ? "var(--primary)" : "var(--bg-card)",
             }}
           >

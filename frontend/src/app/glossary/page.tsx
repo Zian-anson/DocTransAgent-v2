@@ -1,18 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { glossaryApi } from "@/lib/api";
-
-interface GlossaryItem {
-  id: string;
-  source_term: string;
-  target_term: string;
-  category: string;
-  project: string;
-}
+import { glossaryApi, type GlossaryEntry } from "@/lib/api";
 
 export default function GlossaryPage() {
-  const [entries, setEntries] = useState<GlossaryItem[]>([]);
+  const [entries, setEntries] = useState<GlossaryEntry[]>([]);
   const [sourceTerm, setSourceTerm] = useState("");
   const [targetTerm, setTargetTerm] = useState("");
   const [category, setCategory] = useState("");
@@ -24,7 +16,12 @@ export default function GlossaryPage() {
     } catch {}
   }, []);
 
-  useEffect(() => { loadEntries(); }, [loadEntries]);
+  useEffect(() => {
+    glossaryApi
+      .list()
+      .then(setEntries)
+      .catch(() => {});
+  }, []);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +48,7 @@ export default function GlossaryPage() {
   };
 
   // Group by category
-  const grouped = entries.reduce<Record<string, GlossaryItem[]>>((acc, e) => {
+  const grouped = entries.reduce<Record<string, GlossaryEntry[]>>((acc, e) => {
     const cat = e.category || "未分类";
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(e);

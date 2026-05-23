@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { dashboardApi } from "@/lib/api";
+import { dashboardApi, type DashboardStats } from "@/lib/api";
 import Link from "next/link";
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

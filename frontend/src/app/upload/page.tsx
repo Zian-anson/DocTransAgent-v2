@@ -2,12 +2,17 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { documentsApi, translationApi, kbApi } from "@/lib/api";
+import {
+  documentsApi,
+  translationApi,
+  kbApi,
+  type DocumentSummary,
+} from "@/lib/api";
 import { StatusBadge } from "@/components/Badges";
 import { useTranslationProgress } from "@/hooks/useTranslationProgress";
 
 export default function UploadPage() {
-  const [docs, setDocs] = useState<any[]>([]);
+  const [docs, setDocs] = useState<DocumentSummary[]>([]);
   const [uploading, setUploading] = useState(false);
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   const { progress, startPolling } = useTranslationProgress(activeDocId);
@@ -18,7 +23,12 @@ export default function UploadPage() {
     } catch {}
   }, []);
 
-  useEffect(() => { loadDocs(); }, [loadDocs]);
+  useEffect(() => {
+    documentsApi
+      .list()
+      .then(setDocs)
+      .catch(() => {});
+  }, []);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

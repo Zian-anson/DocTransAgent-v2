@@ -16,8 +16,20 @@ const MODELS: ModelStatus[] = [
   { name: "Qwen3-Embedding", role: "向量嵌入", color: "#f59e0b", status: "online" },
 ];
 
+interface HealthResponse {
+  status: string;
+  service: string;
+  models: {
+    translate: string;
+    qa: string;
+    structure: string;
+    embed: string;
+  };
+  gmi_cloud: string;
+}
+
 export default function GMIStatusBar() {
-  const [health, setHealth] = useState<any>(null);
+  const [health, setHealth] = useState<HealthResponse | null>(null);
 
   useEffect(() => {
     fetch("/api/health")
