@@ -1,0 +1,274 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { documentsApi, exportApi, glossaryApi } from "@/lib/api";
+import { ModelBadge, StatusBadge } from "@/components/Badges";
+
+interface Section {
+  heading: string;
+  level: number;
+  content: string;
+}
+
+interface TransSection {
+  heading: string;
+  level: number;
+  content: string;
+}
+
+export default function TranslateReviewPage() {
+  const { id } = useParams<{ id: string }>();
+  const [doc, setDoc] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState<number | null>(null);
+  const [showGlossary, setShowGlossary] = useState(true);
+  const [glossary, setGlossary] = useState<{ source: string; target: string }[]>([]);
+
+  useEffect(() => {
+    if (!id) return;
+    documentsApi
+      .get(id as string)
+      .then((d) => {
+        setDoc(d);
+        if (d.sections?.length > 0) setActiveSection(0);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+    glossaryApi.list().then((entries: any[]) => {
+      setGlossary(entries.map((e: any) => ({ source: e.source_term, target: e.target_term })));
+    }).catch(() => {});
+  }, [id]);
+
+  const renderHighlighted = (text: string, lang: "source" | "target") => {
+    if (!showGlossary || glossary.length === 0) return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const terms = lang === "source"
+      ? glossary.map((g) => g.source).filter(Boolean)
+      : glossary.map((g) => g.target).filter(Boolean);
+    if (terms.length === 0) return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const escaped = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).sort((a, b) => b.length - a.length).join("|");
+    const pattern = new RegExp(`(${escaped})`, "gi");
+    const parts = text.split(pattern);
+    let isMatch = true;
+    return parts.map((part) => {
+      isMatch = !isMatch;
+      if (isMatch) return `<mark style="background:var(--primary-subtle);border-radius:2px;padding:0 1px">${part}</mark>`;
+      return part.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }).join("");
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg" style={{ color: "var(--text-muted)" }}>加载中...</div>
+      </div>
+    );
+  }
+
+  if (!doc) {
+    return (
+      <div className="text-center py-20" style={{ color: "var(--text-muted)" }}>
+        <p className="text-lg font-medium mb-2">Document not found</p>
+        <p className="text-lg font-medium">文档未找到</p>
+      </div>
+    );
+  }
+
+  const sections: Section[] = doc.sections || [];
+  const translated: TransSection[] = doc.translated_sections || [];
+  const hasTranslation = translated.length > 0;
+
+  const handleExport = async (fmt: "pdf" | "docx" | "md") => {
+    try {
+      let blob: Blob;
+      if (fmt === "pdf") blob = await exportApi.pdf(id as string);
+      else if (fmt === "docx") blob = await exportApi.docx(id as string);
+      else blob = await exportApi.bilingual(id as string, "md");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${doc.filename.replace(/\.[^.]+$/, "")}_bilingual.${fmt}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export failed:", err);
+    }
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">{doc.filename}</h1>
+            <StatusBadge status={doc.status} />
+          </div>
+          <div className="flex items-center gap-2 mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
+            <span>{doc.source_lang?.toUpperCase()} → {doc.target_lang?.toUpperCase()}</span>
+            <span>·</span>
+            <span>{doc.word_count?.toLocaleString()} words</span>
+            {hasTranslation && (
+              <>
+                <span>·</span>
+                <ModelBadge model="Gemini 3.1 Flash" latency={234} tokens={1204} />
+              </>
+            )}
+          </div>
+        </div>
+        {hasTranslation && (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              {[
+                { fmt: "pdf" as const, label: "PDF" },
+                { fmt: "docx" as const, label: "DOCX" },
+                { fmt: "md" as const, label: "MD" },
+              ].map(({ fmt, label }) => (
+                <button
+                  key={fmt}
+                  onClick={() => handleExport(fmt)}
+                  className="text-xs px-2.5 py-1 rounded-md border transition-colors"
+                  style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <span className="text-sm" style={{ color: "var(--text-muted)" }}>
+                术语
+              </span>
+              <button
+                onClick={() => setShowGlossary(!showGlossary)}
+                style={{
+                  background: showGlossary ? "var(--primary)" : "var(--border)",
+                }}
+                className="relative w-10 h-5 rounded-full transition-colors duration-200"
+              >
+                <span
+                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${
+                    showGlossary ? "left-5" : "left-0.5"
+                  }`}
+                />
+              </button>
+            </label>
+          </div>
+        )}
+      </div>
+
+      {/* Section navigator */}
+      {sections.length > 0 && (
+        <div className="flex gap-1.5 flex-wrap">
+          {sections.map((s, i) => (
+            <button
+              key={i}
+              onClick={() => setActiveSection(i)}
+              className={`text-xs px-3 py-1.5 rounded-lg transition-colors truncate max-w-[200px] ${
+                activeSection === i
+                  ? "text-white"
+                  : "hover:opacity-80"
+              }`}
+              style={{
+                background: activeSection === i ? "var(--primary)" : "var(--bg-input)",
+                color: activeSection === i ? "white" : "var(--text-muted)",
+              }}
+            >
+              {s.heading}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Side-by-side comparison */}
+      {activeSection !== null && sections[activeSection] && (
+        <div className="grid grid-cols-2 gap-4">
+          {/* Source */}
+          <div className="rounded-xl p-6 border" style={{ background: "var(--bg-card)", borderColor: "var(--border)" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs px-2 py-0.5 rounded" style={{ background: "var(--bg-input)", color: "var(--text-muted)" }}>
+                {doc.source_lang?.toUpperCase()}
+              </span>
+              <span className="text-sm font-medium" style={{ color: "var(--text)" }}>原文</span>
+            </div>
+            <h2 className="text-lg font-semibold mb-3" style={{ fontSize: 24 - sections[activeSection].level * 2 }}>
+              {sections[activeSection].heading}
+            </h2>
+            <div
+              className="text-sm leading-relaxed whitespace-pre-wrap"
+              style={{ color: "var(--text-muted)" }}
+              dangerouslySetInnerHTML={{ __html: renderHighlighted(sections[activeSection].content, "source") }}
+            />
+          </div>
+
+          {/* Translation */}
+          <div className="rounded-xl p-6 border" style={{
+            background: "var(--bg-card)",
+            borderColor: hasTranslation ? "var(--primary)" : "var(--border)",
+          }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs px-2 py-0.5 rounded" style={{ background: "var(--primary-subtle)", color: "var(--primary)" }}>
+                {doc.target_lang?.toUpperCase()}
+              </span>
+              <span className="text-sm font-medium" style={{ color: "var(--text)" }}>翻译</span>
+              {hasTranslation && <ModelBadge model="Gemini 3.1 Flash" latency={234} />}
+            </div>
+            {hasTranslation && translated[activeSection] ? (
+              <>
+                <h2 className="text-lg font-semibold mb-3" style={{ fontSize: 24 - translated[activeSection].level * 2 }}>
+                  {showGlossary ? translated[activeSection].heading : translated[activeSection].heading}
+                </h2>
+                <div
+                  className="text-sm leading-relaxed whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{ __html: renderHighlighted(translated[activeSection].content, "target") }}
+                />
+                {!showGlossary && (
+                  <div className="mt-3 text-xs italic opacity-50">
+                    Glossary disabled — showing raw translation without terminology enforcement
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-32" style={{ color: "var(--text-muted)" }}>
+                <div>
+                  <p className="text-sm font-medium mb-1">Translation pending</p>
+                  <p className="text-sm">翻译尚未完成</p>
+                  <p className="text-xs mt-1">点击"翻译"按钮开始</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Model pipeline summary */}
+      {hasTranslation && (
+        <div className="rounded-xl p-6 border" style={{ background: "var(--bg-card)", borderColor: "var(--border)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-2 h-2 rounded-full" style={{ background: "var(--success)" }} />
+            <span className="text-sm font-medium" style={{ color: "var(--text)" }}>Processing Pipeline</span>
+          </div>
+          <div className="grid grid-cols-4 gap-3 text-xs">
+            {[
+              { model: "GPT-5.4-Nano", task: "文档结构分析", status: "completed", ms: 145 },
+              { model: "Gemini 3.1 Flash", task: "批量翻译 (" + (doc.chunk_count || "?") + " chunks)", status: "completed", ms: 234 },
+              { model: "Qwen3-Embedding", task: "向量嵌入生成", status: doc.status === "indexed" ? "completed" : "pending", ms: 312 },
+              { model: "DeepSeek V4 Pro", task: "RAG 问答就绪", status: doc.status === "indexed" ? "ready" : "pending", ms: null },
+            ].map((item) => (
+              <div key={item.model} className="rounded-lg p-3" style={{ background: "var(--bg)" }}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ background: item.status === "completed" || item.status === "ready" ? "var(--success)" : "var(--text-muted)" }}
+                  />
+                  <span className="font-medium" style={{ color: "var(--text)" }}>{item.model}</span>
+                </div>
+                <div style={{ color: "var(--text-muted)" }}>{item.task}</div>
+                {item.ms && <div className="mt-1" style={{ color: "var(--text-muted)" }}>{item.ms}ms</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

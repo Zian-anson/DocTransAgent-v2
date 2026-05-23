@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Environment (contains API keys)
+.env
+backend/.env
+
+# Database / Data
+backend/data/
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+.next/
+out/
+
+# Build
+dist/
+build/
+
+# ChromaDB
+chroma_data/
+backend/data/chroma/
+
+# Uploads
+backend/static/uploads/
+
+# OMC state
+.omc/
+backend/.omc/
