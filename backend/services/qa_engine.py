@@ -3,14 +3,14 @@ RAG QA Engine — retrieval-augmented generation with streaming and citations.
 """
 import logging
 import re
-from typing import AsyncGenerator, List
+from typing import AsyncGenerator
 from gmi_client import gmi
 from services.retriever import search
 
 logger = logging.getLogger(__name__)
 
 # In-memory conversation store (per session)
-_conversations: dict[str, List[dict]] = {}
+_conversations: dict[str, list[dict]] = {}
 
 
 async def ask(
@@ -74,7 +74,7 @@ def clear_session(session_id: str):
     _conversations.pop(session_id, None)
 
 
-def _extract_citations(retrieved: List[dict], answer: str) -> List[dict]:
+def _extract_citations(retrieved: list[dict], answer: str) -> list[dict]:
     """Parse [Source N] references from the answer and link to retrieved chunks."""
     pattern = re.compile(r"\[Source\s*(\d+)\]", re.IGNORECASE)
     cited_indices = set()

@@ -5,7 +5,7 @@ OpenAI-compatible SDK. Sponsor integration showcase.
 """
 import time
 import logging
-from typing import AsyncGenerator, Optional, List, Dict
+from typing import AsyncGenerator
 from openai import AsyncOpenAI
 import json
 from config import get_settings
@@ -31,7 +31,7 @@ class GMIClient:
 
     # ── Translation ─────────────────────────────────────────────
     async def translate(
-        self, text: str, source_lang: str, target_lang: str, glossary: Optional[Dict[str, str]] = None
+        self, text: str, source_lang: str, target_lang: str, glossary: dict[str, str] | None = None
     ) -> dict:
         """Translate a single text chunk with glossary injection."""
         glossary_block = _format_glossary(glossary, source_lang, target_lang)
@@ -66,7 +66,7 @@ class GMIClient:
 
     # ── Structured QA (RAG) ─────────────────────────────────────
     async def ask_with_context(
-        self, question: str, contexts: List[str], history: Optional[List[dict]] = None
+        self, question: str, contexts: list[str], history: list[dict] | None = None
     ) -> dict:
         """DeepSeek V3 RAG QA with source citation requirement."""
         ctx_text = "\n\n---\n\n".join(
@@ -103,7 +103,7 @@ class GMIClient:
 
     # ── Streaming QA ────────────────────────────────────────────
     async def ask_stream(
-        self, question: str, contexts: List[str], history: Optional[List[dict]] = None
+        self, question: str, contexts: list[str], history: list[dict] | None = None
     ) -> AsyncGenerator[str, None]:
         ctx_text = "\n\n---\n\n".join(
             f"[Source {i+1}] {c}" for i, c in enumerate(contexts)
@@ -222,7 +222,7 @@ class GMIClient:
         return json.loads(resp.choices[0].message.content)
 
 
-def _format_glossary(glossary: Optional[Dict[str, str]], src: str, tgt: str) -> str:
+def _format_glossary(glossary: dict[str, str] | None, src: str, tgt: str) -> str:
     if not glossary:
         return ""
     lines = [f'  "{k}" → "{v}"' for k, v in list(glossary.items())[:30]]

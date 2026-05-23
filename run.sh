@@ -19,7 +19,14 @@ fi
 
 # Deps
 echo "[1/3] Backend deps..."
-cd "$DIR/backend" && pip install -q -r requirements.txt
+cd "$DIR/backend"
+if [ ! -d "$DIR/backend/.venv" ]; then
+    python3 -m venv "$DIR/backend/.venv"
+fi
+# shellcheck disable=SC1090
+source "$DIR/backend/.venv/bin/activate"
+pip install -q --upgrade pip
+pip install -q -r requirements.txt
 echo "[2/3] Frontend deps..."
 cd "$DIR/frontend" && npm install --silent
 

@@ -1,6 +1,5 @@
 """Knowledge base routes — index, search, stats."""
 import logging
-from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from database import get_db
@@ -74,7 +73,7 @@ async def _run_indexing(doc_id: str):
 
 
 @router.get("/search")
-async def search_knowledge_base(q: str, top_k: int = 10, lang: Optional[str] = None):
+async def search_knowledge_base(q: str, top_k: int = 10, lang: str | None = None):
     """Cross-lingual semantic search."""
     results = await search(q, top_k=top_k, lang_filter=lang)
     return {"query": q, "results": results, "count": len(results)}

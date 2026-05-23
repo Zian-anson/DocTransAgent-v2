@@ -3,7 +3,6 @@ Multi-format document parser. Extracts text preserving section hierarchy.
 """
 import io
 import logging
-from typing import Optional, List
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -71,14 +70,14 @@ async def _parse_txt(file_path: str) -> str:
         return f.read()
 
 
-def _extract_sections(text: str) -> List[dict]:
+def _extract_sections(text: str) -> list[dict]:
     """Split text into sections based on markdown headings."""
     import re
 
     lines = text.split("\n")
     sections = []
     current_heading = "Introduction"
-    current_content: List[str] = []
+    current_content: list[str] = []
     current_level = 1
 
     heading_pattern = re.compile(r"^(#{1,6})\s+(.+)$")

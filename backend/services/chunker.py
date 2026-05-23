@@ -1,19 +1,18 @@
 """
 Semantic chunking — structure-aware splitting for translation and embedding.
 """
-from typing import Optional, List
 import re
 from config import get_settings
 
 settings = get_settings()
 
 
-def chunk_for_translation(text: str, max_words: Optional[int] = None) -> List[str]:
+def chunk_for_translation(text: str, max_words: int | None = None) -> list[str]:
     """Split text into ~N-word chunks for LLM translation, respecting paragraph boundaries."""
     limit = max_words or settings.chunk_size
     paragraphs = _split_paragraphs(text)
-    chunks: List[str] = []
-    current: List[str] = []
+    chunks: list[str] = []
+    current: list[str] = []
     current_len = 0
 
     for para in paragraphs:
@@ -32,15 +31,15 @@ def chunk_for_translation(text: str, max_words: Optional[int] = None) -> List[st
     return chunks or [text]
 
 
-def chunk_for_embedding(text: str, max_words: Optional[int] = None, overlap: Optional[int] = None) -> List[str]:
+def chunk_for_embedding(text: str, max_words: int | None = None, overlap: int | None = None) -> list[str]:
     """Split text into overlapping chunks for vector embedding."""
     limit = max_words or settings.chunk_size
     overlap_words = overlap or settings.chunk_overlap
     paragraphs = _split_paragraphs(text)
-    chunks: List[str] = []
-    current: List[str] = []
+    chunks: list[str] = []
+    current: list[str] = []
     current_len = 0
-    overlap_buffer: List[str] = []
+    overlap_buffer: list[str] = []
 
     for para in paragraphs:
         para_words = len(para.split())
@@ -67,7 +66,7 @@ def chunk_for_embedding(text: str, max_words: Optional[int] = None, overlap: Opt
     return chunks or [text]
 
 
-def chunk_sections_for_translation(sections: List[dict]) -> List[dict]:
+def chunk_sections_for_translation(sections: list[dict]) -> list[dict]:
     """For each section, chunk its content for translation. Returns enriched list."""
     result = []
     for section in sections:
@@ -84,7 +83,7 @@ def chunk_sections_for_translation(sections: List[dict]) -> List[dict]:
     return result
 
 
-def _split_paragraphs(text: str) -> List[str]:
+def _split_paragraphs(text: str) -> list[str]:
     """Split text into paragraphs, handling various line break patterns."""
     # Normalize line breaks
     text = re.sub(r"\r\n|\r", "\n", text)

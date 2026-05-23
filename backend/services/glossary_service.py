@@ -1,7 +1,6 @@
 """
 Terminology glossary — CRUD + auto-extraction from documents.
 """
-from typing import Optional, List
 import logging
 from sqlalchemy.orm import Session
 from models import GlossaryEntry
@@ -33,7 +32,7 @@ def add_glossary_entry(
     source_lang: str = "zh",
     target_lang: str = "en",
     project: str = "default",
-    category: Optional[str] = None,
+    category: str | None = None,
 ) -> GlossaryEntry:
     entry = GlossaryEntry(
         project=project,
@@ -51,7 +50,7 @@ def add_glossary_entry(
 
 def list_glossary_entries(
     db: Session, project: str = "default", source_lang: str = "zh", target_lang: str = "en"
-) -> List[GlossaryEntry]:
+) -> list[GlossaryEntry]:
     return (
         db.query(GlossaryEntry)
         .filter(
@@ -71,6 +70,6 @@ def delete_glossary_entry(db: Session, entry_id: str):
         db.commit()
 
 
-async def auto_extract_glossary(text: str, source_lang: str = "zh", target_lang: str = "en") -> List[dict]:
+async def auto_extract_glossary(text: str, source_lang: str = "zh", target_lang: str = "en") -> list[dict]:
     """Use LLM to auto-extract domain terms from document text."""
     return await gmi.extract_glossary(text, source_lang, target_lang)

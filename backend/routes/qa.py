@@ -1,7 +1,6 @@
 """Q&A routes — ask questions, streaming responses."""
 import json
 import logging
-from typing import Optional, List
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -20,8 +19,8 @@ class QuestionRequest(BaseModel):
 class QuestionResponse(BaseModel):
     question: str
     answer: str
-    citations: List[dict]
-    retrieved_chunks: List[dict]
+    citations: list[dict]
+    retrieved_chunks: list[dict]
     model: str
     tokens_input: int
     tokens_output: int
@@ -45,7 +44,7 @@ async def ask_question_stream(req: QuestionRequest):
         raise HTTPException(400, "Question cannot be empty")
 
     async def event_stream():
-        full_answer_parts: List[str] = []
+        full_answer_parts: list[str] = []
         try:
             async for token in ask_stream(req.question, top_k=req.top_k, session_id=req.session_id):
                 full_answer_parts.append(token)

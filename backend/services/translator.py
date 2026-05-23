@@ -1,7 +1,6 @@
 """
 Translation orchestrator — batch translation with glossary, progress, and quality check.
 """
-from typing import Optional, List
 import asyncio
 import logging
 from dataclasses import dataclass
@@ -28,10 +27,10 @@ class TranslationOrchestrator:
     async def translate_document(
         self,
         doc_id: str,
-        sections: List[dict],
+        sections: list[dict],
         source_lang: str,
         target_lang: str,
-        glossary: Optional[dict[str, str]] = None,
+        glossary: dict[str, str] | None = None,
     ) -> dict:
         """Translate all sections of a document. Returns translated sections + metadata."""
         chunked = chunk_sections_for_translation(sections)
@@ -42,7 +41,7 @@ class TranslationOrchestrator:
             total=total, completed=0, failed=0, status="running"
         )
 
-        results: List[dict] = []
+        results: list[dict] = []
 
         async def translate_one(idx: int, item: dict) -> dict:
             async with sem:
@@ -85,14 +84,14 @@ class TranslationOrchestrator:
             "tokens_output": total_tokens_output,
         }
 
-    def get_progress(self, doc_id: str) -> Optional[TranslationProgress]:
+    def get_progress(self, doc_id: str) -> TranslationProgress | None:
         return self.progress.get(doc_id)
 
 
-def _reassemble_sections(chunk_results: List[dict]) -> List[dict]:
+def _reassemble_sections(chunk_results: list[dict]) -> list[dict]:
     """Reassemble translated chunks back into sections, preserving duplicate headings."""
-    ordered: List[dict] = []
-    lookup: dict[str, List[dict]] = {}
+    ordered: list[dict] = []
+    lookup: dict[str, list[dict]] = {}
     seen_headings: dict[str, int] = {}
     for r in chunk_results:
         heading = r["heading"]
@@ -105,7 +104,7 @@ def _reassemble_sections(chunk_results: List[dict]) -> List[dict]:
     for r in chunk_results:
         heading = r["heading"]
         chunks_list = lookup[heading]
-        if not chunks_list or chunks_List[0]["level"] == r["level"]:
+        if not chunks_list or chunks_list[0]["level"] == r["level"]:
             chunks_list.append(r)
         else:
             # Different level — treat as separate section with an indexed key
@@ -123,7 +122,7 @@ def _reassemble_sections(chunk_results: List[dict]) -> List[dict]:
         )
         result.append({
             "heading": display_heading,
-            "level": chunks_List[0]["level"],
+            "level": chunks_list[0]["level"],
             "content": content,
         })
     return result

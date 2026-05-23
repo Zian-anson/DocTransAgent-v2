@@ -1,7 +1,6 @@
 """
 Hybrid retriever — semantic search over ChromaDB with cross-lingual support.
 """
-from typing import Optional, List
 import logging
 from database import get_chroma_collection
 from services.embedder import embed_query
@@ -9,7 +8,7 @@ from services.embedder import embed_query
 logger = logging.getLogger(__name__)
 
 
-async def search(query: str, top_k: int = 10, lang_filter: Optional[str] = None) -> List[dict]:
+async def search(query: str, top_k: int = 10, lang_filter: str | None = None) -> list[dict]:
     """Cross-lingual semantic search. Query in any language, find docs in any language."""
     collection = get_chroma_collection()
     query_vec = await embed_query(query)
@@ -37,7 +36,7 @@ async def search(query: str, top_k: int = 10, lang_filter: Optional[str] = None)
     return items
 
 
-async def index_chunks(chunks: List[dict], collection_name: str = "knowledge_base") -> int:
+async def index_chunks(chunks: list[dict], collection_name: str = "knowledge_base") -> int:
     """Index embedded chunks into ChromaDB."""
     collection = get_chroma_collection(collection_name)
 

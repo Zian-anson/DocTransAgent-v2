@@ -1,6 +1,5 @@
 """Glossary management routes."""
 import logging
-from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -20,7 +19,7 @@ class GlossaryCreate(BaseModel):
     source_lang: str = "zh"
     target_lang: str = "en"
     project: str = "default"
-    category: Optional[str] = None
+    category: str | None = None
 
 
 class AutoExtractRequest(BaseModel):
