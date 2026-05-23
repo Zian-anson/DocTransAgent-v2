@@ -1,4 +1,6 @@
 """Glossary management routes."""
+from __future__ import annotations
+
 import logging
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException

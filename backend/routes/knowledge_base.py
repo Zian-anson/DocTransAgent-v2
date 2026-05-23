@@ -1,4 +1,6 @@
 """Knowledge base routes — index, search, stats."""
+from __future__ import annotations
+
 import logging
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks

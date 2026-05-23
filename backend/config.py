@@ -9,7 +9,7 @@ class Settings(BaseSettings):
 
     # GMI Cloud Inference Engine
     gmi_api_key: str = "your-gmi-api-key-here"
-    gmi_base_url: str = "https://api.gmicloud.com/v1"
+    gmi_base_url: str = "https://api.gmi-serving.com/v1"
 
     # Model routing map (model names on GMI Cloud platform)
     llm_translate: str = "gemini-2.5-flash"
