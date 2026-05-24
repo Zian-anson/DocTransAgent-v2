@@ -7,19 +7,21 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 export const metadata: Metadata = {
   title: "DocTransAgent — AI Translation & Knowledge Base",
   description:
-    "AI-powered overseas document translation & knowledge base agent. Built on GMI Cloud Inference Engine.",
+    "AI-powered multilingual document translation & GraphRAG knowledge platform. Built on GMI Cloud.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh">
       <body className="antialiased">
-        <GMIStatusBar />
         <div className="flex min-h-screen">
           <Sidebar />
-          <main className="ml-56 flex-1 p-8">
-            <ErrorBoundary>{children}</ErrorBoundary>
-          </main>
+          <div className="flex flex-col flex-1" style={{ marginLeft: "224px" }}>
+            <GMIStatusBar />
+            <main className="flex-1 p-8">
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </main>
+          </div>
         </div>
       </body>
     </html>
