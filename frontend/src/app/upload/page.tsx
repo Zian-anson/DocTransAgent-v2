@@ -24,8 +24,8 @@ const LANG_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 function langDisplay(code?: string): string {
-  if (!code) return "-";
-  if (code.toLowerCase() === "auto") return "自动检测";
+  if (!code) return "—";
+  if (code.toLowerCase() === "auto") return "自动";
   return LANG_LABEL[code.toLowerCase()] || code.toUpperCase();
 }
 
@@ -55,50 +55,37 @@ export default function UploadPage() {
       await documentsApi.upload(file);
       await loadDocs();
     } catch (err) {
-      alert("上传失败: " + (err instanceof Error ? err.message : "Unexpected error"));
+      alert("上传失败: " + (err instanceof Error ? err.message : "未知错误"));
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
   };
 
-  // Poll document status until it reaches the expected state or errors
   const pollDocStatus = (docId: string, expectedStatus: string) => {
     const interval = setInterval(async () => {
       try {
         const doc = await documentsApi.get(docId);
         if (doc.status === expectedStatus || doc.status === "error") {
           clearInterval(interval);
-          setTranslatingIds((current) => {
-            const next = new Set(current);
-            next.delete(docId);
-            return next;
-          });
+          setTranslatingIds((cur) => { const n = new Set(cur); n.delete(docId); return n; });
           loadDocs();
         }
       } catch {
         clearInterval(interval);
-        setTranslatingIds((current) => {
-          const next = new Set(current);
-          next.delete(docId);
-          return next;
-        });
+        setTranslatingIds((cur) => { const n = new Set(cur); n.delete(docId); return n; });
       }
     }, 1000);
-    // Timeout after 30 seconds
     setTimeout(() => {
       clearInterval(interval);
-      setTranslatingIds((current) => {
-        const next = new Set(current);
-        next.delete(docId);
-        return next;
-      });
+      setTranslatingIds((cur) => { const n = new Set(cur); n.delete(docId); return n; });
       loadDocs();
     }, 30000);
   };
 
   const handleTranslate = async (docId: string) => {
     if (translatingIds.has(docId)) return;
-    setTranslatingIds((current) => new Set(current).add(docId));
+    setTranslatingIds((cur) => new Set(cur).add(docId));
     setActiveDocId(docId);
     const targetLang = targetLangs[docId];
     try {
@@ -107,18 +94,14 @@ export default function UploadPage() {
       loadDocs();
       pollDocStatus(docId, "translated");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unexpected error";
+      const message = err instanceof Error ? err.message : "未知错误";
       if (message.includes("status translating")) {
         startPolling(docId);
         pollDocStatus(docId, "translated");
         return;
       }
-      setTranslatingIds((current) => {
-        const next = new Set(current);
-        next.delete(docId);
-        return next;
-      });
-      alert("Translation failed: " + (err instanceof Error ? err.message : "Unexpected error"));
+      setTranslatingIds((cur) => { const n = new Set(cur); n.delete(docId); return n; });
+      alert("翻译失败: " + message);
     }
   };
 
@@ -127,57 +110,82 @@ export default function UploadPage() {
       await kbApi.index(docId);
       pollDocStatus(docId, "indexed");
     } catch (err) {
-      alert("Index failed: " + (err instanceof Error ? err.message : "Unexpected error"));
+      alert("索引失败: " + (err instanceof Error ? err.message : "未知错误"));
     }
   };
 
   const handleDelete = async (docId: string) => {
-    if (!confirm("Delete this document?")) return;
+    if (!confirm("确认删除此文档？")) return;
     try {
       await documentsApi.delete(docId);
       loadDocs();
     } catch (err) {
-      alert("Delete failed: " + (err instanceof Error ? err.message : "Unexpected error"));
+      alert("删除失败: " + (err instanceof Error ? err.message : "未知错误"));
     }
   };
 
+  const paged = docs.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.ceil(docs.length / pageSize);
+
   return (
     <div className="space-y-6 animate-fade-in">
+
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">文档上传</h1>
+          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--text)" }}>
+            文档管理
+          </h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            支持 PDF, DOCX, Markdown, TXT 格式
+            PDF · DOCX · Markdown · TXT
           </p>
         </div>
-        <label className="btn-primary cursor-pointer text-sm">
-          {uploading ? "上传中..." : "+ 上传文档"}
-          <input type="file" className="hidden" accept=".pdf,.docx,.md,.txt" onChange={handleUpload} disabled={uploading} />
+        <label className="btn-primary cursor-pointer">
+          {uploading ? (
+            <>
+              <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+              上传中
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: "13px" }}>↑</span>
+              上传文档
+            </>
+          )}
+          <input
+            type="file"
+            className="hidden"
+            accept=".pdf,.docx,.md,.txt"
+            onChange={handleUpload}
+            disabled={uploading}
+          />
         </label>
       </div>
 
-      {/* Active translation progress */}
-      {progress && (
-        <div className="card border-indigo-500/30">
-          <div className="flex items-center gap-3">
-            <span className="animate-pulse text-lg">⚡</span>
-            <div className="flex-1">
-              <div className="text-sm font-medium">翻译进度 · GMI Cloud Gemini 2.5 Flash</div>
-              <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                {progress.completed}/{progress.total} chunks completed
-                {progress.failed > 0 && ` (${progress.failed} failed)`}
-              </div>
+      {/* Translation progress */}
+      {progress && progress.total > 0 && (
+        <div
+          className="rounded-lg px-5 py-4 border"
+          style={{ background: "var(--primary-subtle)", borderColor: "var(--primary-dim)" }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <span className="text-sm font-medium" style={{ color: "var(--primary)" }}>翻译进行中</span>
+              <span className="text-xs ml-3" style={{ color: "var(--text-muted)" }}>
+                {progress.completed} / {progress.total} 段完成
+                {progress.failed > 0 && <span style={{ color: "var(--error)" }}> · {progress.failed} 失败</span>}
+              </span>
             </div>
-            <span className="text-sm font-mono" style={{ color: "var(--accent)" }}>
+            <span className="text-sm font-semibold tabular-nums" style={{ color: "var(--primary)", fontFamily: "var(--font-mono)" }}>
               {progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0}%
             </span>
           </div>
-          <div className="mt-3 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--bg-input)" }}>
+          <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--primary-dim)" }}>
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${progress.total > 0 ? (progress.completed / progress.total) * 100 : 0}%`,
-                background: "linear-gradient(90deg, var(--primary), var(--accent))",
+                background: "var(--primary)",
               }}
             />
           </div>
@@ -185,127 +193,185 @@ export default function UploadPage() {
       )}
 
       {/* Document list */}
-      <div className="card">
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         {docs.length === 0 ? (
-          <div className="text-center py-12" style={{ color: "var(--text-muted)" }}>
-            <p className="text-lg font-medium mb-1">No documents yet</p>
-            <p>还没有上传文档</p>
-            <p className="text-sm mt-1">上传 PDF, DOCX, MD 或 TXT 文件开始翻译</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center px-8">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 text-xl"
+              style={{ background: "var(--bg-input)", color: "var(--text-faint)" }}
+            >
+              ↑
+            </div>
+            <p className="text-sm font-medium mb-1" style={{ color: "var(--text)" }}>
+              还没有文档
+            </p>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              上传 PDF、DOCX 或 Markdown 文件，开始多语言翻译流程
+            </p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: "var(--border)" }}>
-                <th className="text-left py-3 px-3 font-medium" style={{ color: "var(--text-muted)" }}>文件名</th>
-                <th className="text-left py-3 px-3 font-medium" style={{ color: "var(--text-muted)" }}>类型</th>
-                <th className="text-left py-3 px-3 font-medium" style={{ color: "var(--text-muted)" }}>字数</th>
-                <th className="text-left py-3 px-3 font-medium" style={{ color: "var(--text-muted)" }}>源语言</th>
-                <th className="text-left py-3 px-3 font-medium" style={{ color: "var(--text-muted)" }}>状态</th>
-                <th className="text-right py-3 px-3 font-medium" style={{ color: "var(--text-muted)" }}>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {docs.slice((page - 1) * pageSize, page * pageSize).map((doc) => {
-                const canTranslate = ["uploaded", "parsed"].includes(doc.status);
-                const selectedTarget = targetLangs[doc.id] || doc.target_lang || "en";
-                return (
-                <tr key={doc.id} className="border-b transition-colors hover:bg-white/5" style={{ borderColor: "var(--border)" }}>
-                  <td className="py-3 px-3 font-medium">{doc.filename}</td>
-                  <td className="py-3 px-3">
-                    <span className="badge" style={{ background: "var(--bg-input)" }}>{doc.file_type.toUpperCase()}</span>
-                  </td>
-                  <td className="py-3 px-3 text-sm" style={{ color: "var(--text-muted)" }}>
-                    {doc.word_count?.toLocaleString() ?? "-"}
-                  </td>
-                  <td className="py-3 px-3 text-xs" style={{ color: "var(--text-muted)" }}>
-                    {langDisplay(doc.source_lang)}
-                  </td>
-                  <td className="py-3 px-3"><StatusBadge status={doc.status} /></td>
-                  <td className="py-3 px-3">
-                    <div className="flex justify-end items-center gap-1.5">
-                      {canTranslate && (
-                        <>
-                          <span className="text-xs opacity-50">→</span>
-                          <select
-                            value={selectedTarget}
-                            onChange={(e) =>
-                              setTargetLangs((cur) => ({ ...cur, [doc.id]: e.target.value }))
-                            }
-                            disabled={translatingIds.has(doc.id)}
-                            className="text-xs rounded-md px-2 py-1 border"
-                            style={{
-                              background: "var(--bg-input)",
-                              borderColor: "var(--border)",
-                              color: "var(--text)",
-                            }}
-                          >
-                            {LANG_OPTIONS.map((l) => (
-                              <option key={l.code} value={l.code}>{l.label}</option>
-                            ))}
-                          </select>
-                        </>
-                      )}
-                      {["uploaded", "parsed", "translating", "parsing"].includes(doc.status) && (
-                        <button
-                          onClick={() => handleTranslate(doc.id)}
-                          disabled={translatingIds.has(doc.id) || ["translating", "parsing"].includes(doc.status)}
-                          className="btn-primary text-xs py-1 px-2.5 disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          {translatingIds.has(doc.id) || ["translating", "parsing"].includes(doc.status) ? "翻译中" : "翻译"}
-                        </button>
-                      )}
-                      {["translated", "indexed"].includes(doc.status) && (
-                        <Link href={`/translate/${doc.id}`} className="btn-secondary text-xs py-1 px-2.5"
-                          style={{ color: "var(--accent)", borderColor: "var(--accent)" }}>
-                          查看
-                        </Link>
-                      )}
-                      {doc.status === "translated" && (
-                        <button onClick={() => handleIndex(doc.id)} className="btn-secondary text-xs py-1 px-2.5"
-                          style={{ color: "var(--success)", borderColor: "var(--success)" }}>
-                          索引
-                        </button>
-                      )}
-                      {doc.status === "indexed" && (
-                        <span className="text-xs py-1 px-2.5" style={{ color: "var(--success)" }}>已完成</span>
-                      )}
-                      {doc.status === "error" && (
-                        <span className="text-xs py-1 px-2.5" style={{ color: "var(--error)" }}>查看错误</span>
-                      )}
-                      <button onClick={() => handleDelete(doc.id)} className="text-xs py-1 px-2 opacity-40 hover:opacity-100 hover:text-red-400">
-                        删除
-                      </button>
-                    </div>
-                  </td>
+          <>
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--border-light)" }}>
+                  {["文件名", "类型", "字数", "语言", "状态", "操作"].map((h, i) => (
+                    <th
+                      key={h}
+                      className="py-3 px-4 font-medium text-xs uppercase tracking-wide"
+                      style={{
+                        color: "var(--text-faint)",
+                        textAlign: i === 5 ? "right" : "left",
+                        letterSpacing: "0.06em",
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              );})}
-            </tbody>
-          </table>
-        )}
-        {docs.length > pageSize && (
-          <div className="flex items-center justify-between mt-4 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-              {docs.length} 个文档 · 第 {page}/{Math.ceil(docs.length / pageSize)} 页
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setPage(Math.max(1, page - 1))}
-                disabled={page === 1}
-                className="text-xs px-3 py-1 rounded-md border transition-colors hover:border-indigo-500/50 disabled:opacity-30"
-                style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+              </thead>
+              <tbody>
+                {paged.map((doc) => {
+                  const canTranslate = ["uploaded", "parsed"].includes(doc.status);
+                  const isTranslating = translatingIds.has(doc.id) || ["translating", "parsing"].includes(doc.status);
+                  const selectedTarget = targetLangs[doc.id] || doc.target_lang || "en";
+
+                  return (
+                    <tr
+                      key={doc.id}
+                      style={{ borderBottom: "1px solid var(--border-light)" }}
+                    >
+                      <td className="py-3 px-4">
+                        <span className="font-medium text-sm" style={{ color: "var(--text)" }}>
+                          {doc.filename}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className="badge"
+                          style={{ background: "var(--bg-input)", color: "var(--text-muted)" }}
+                        >
+                          {doc.file_type?.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 tabular-nums text-sm" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                        {doc.word_count?.toLocaleString() ?? "—"}
+                      </td>
+                      <td className="py-3 px-4 text-xs" style={{ color: "var(--text-muted)" }}>
+                        {langDisplay(doc.source_lang)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <StatusBadge status={doc.status} />
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex justify-end items-center gap-2">
+                          {canTranslate && (
+                            <select
+                              value={selectedTarget}
+                              onChange={(e) => setTargetLangs((cur) => ({ ...cur, [doc.id]: e.target.value }))}
+                              disabled={isTranslating}
+                              className="text-xs rounded-md px-2 py-1.5 border"
+                              style={{
+                                background: "var(--bg-input)",
+                                borderColor: "var(--border)",
+                                color: "var(--text)",
+                                fontFamily: "var(--font-sans)",
+                              }}
+                            >
+                              {LANG_OPTIONS.map((l) => (
+                                <option key={l.code} value={l.code}>{l.label}</option>
+                              ))}
+                            </select>
+                          )}
+
+                          {["uploaded", "parsed", "translating", "parsing"].includes(doc.status) && (
+                            <button
+                              onClick={() => handleTranslate(doc.id)}
+                              disabled={isTranslating}
+                              className="btn-primary text-xs"
+                              style={{ padding: "5px 12px" }}
+                            >
+                              {isTranslating ? (
+                                <>
+                                  <span className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                                  翻译中
+                                </>
+                              ) : "翻译"}
+                            </button>
+                          )}
+
+                          {["translated", "indexed"].includes(doc.status) && (
+                            <Link
+                              href={`/translate/${doc.id}`}
+                              className="btn-secondary text-xs"
+                              style={{ padding: "5px 12px", color: "var(--accent)", borderColor: "var(--accent)" }}
+                            >
+                              查看
+                            </Link>
+                          )}
+
+                          {doc.status === "translated" && (
+                            <button
+                              onClick={() => handleIndex(doc.id)}
+                              className="btn-secondary text-xs"
+                              style={{ padding: "5px 12px", color: "var(--success)", borderColor: "var(--success)" }}
+                            >
+                              索引
+                            </button>
+                          )}
+
+                          {doc.status === "indexed" && (
+                            <span className="text-xs" style={{ color: "var(--success)" }}>已完成</span>
+                          )}
+
+                          {doc.status === "error" && (
+                            <span className="text-xs" style={{ color: "var(--error)" }}>出错</span>
+                          )}
+
+                          <button
+                            onClick={() => handleDelete(doc.id)}
+                            className="text-xs px-2 py-1 rounded transition-colors"
+                            style={{ color: "var(--text-faint)" }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--error)"; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-faint)"; }}
+                          >
+                            删除
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div
+                className="flex items-center justify-between px-4 py-3 text-xs"
+                style={{ borderTop: "1px solid var(--border-light)", color: "var(--text-muted)" }}
               >
-                上一页
-              </button>
-              <button
-                onClick={() => setPage(Math.min(Math.ceil(docs.length / pageSize), page + 1))}
-                disabled={page >= Math.ceil(docs.length / pageSize)}
-                className="text-xs px-3 py-1 rounded-md border transition-colors hover:border-indigo-500/50 disabled:opacity-30"
-                style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
-              >
-                下一页
-              </button>
-            </div>
-          </div>
+                <span>{docs.length} 个文档 · 第 {page}/{totalPages} 页</span>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setPage(Math.max(1, page - 1))}
+                    disabled={page === 1}
+                    className="btn-secondary text-xs"
+                    style={{ padding: "4px 10px" }}
+                  >
+                    上一页
+                  </button>
+                  <button
+                    onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    disabled={page >= totalPages}
+                    className="btn-secondary text-xs"
+                    style={{ padding: "4px 10px" }}
+                  >
+                    下一页
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

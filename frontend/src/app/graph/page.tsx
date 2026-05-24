@@ -5,6 +5,36 @@ import { graphApi } from "@/lib/api";
 
 const NODE_TYPES = ["", "note", "heading", "tag", "alias", "wikilink_target"];
 
+const NODE_TYPE_COLORS: Record<string, string> = {
+  note:             "var(--primary)",
+  heading:          "var(--accent)",
+  tag:              "oklch(55% 0.10 280)",
+  alias:            "oklch(55% 0.08 200)",
+  wikilink_target:  "oklch(55% 0.08 130)",
+};
+
+const NODE_TYPE_BG: Record<string, string> = {
+  note:             "var(--primary-subtle)",
+  heading:          "var(--accent-subtle)",
+  tag:              "oklch(95% 0.025 280)",
+  alias:            "oklch(95% 0.020 200)",
+  wikilink_target:  "oklch(96% 0.018 130)",
+};
+
+function NodeTypePill({ type }: { type: string }) {
+  return (
+    <span
+      className="badge"
+      style={{
+        background: NODE_TYPE_BG[type] || "var(--bg-input)",
+        color: NODE_TYPE_COLORS[type] || "var(--text-muted)",
+      }}
+    >
+      {type}
+    </span>
+  );
+}
+
 export default function GraphExplorePage() {
   const [stats, setStats] = useState<any>(null);
   const [nodes, setNodes] = useState<any[]>([]);
@@ -12,16 +42,14 @@ export default function GraphExplorePage() {
   const [searchQ, setSearchQ] = useState("");
   const [filterType, setFilterType] = useState("");
   const [offset, setOffset] = useState(0);
-  const [limit] = useState(30);
+  const limit = 30;
   const [loading, setLoading] = useState(false);
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [neighborhood, setNeighborhood] = useState<any>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   const fetchStats = useCallback(async () => {
-    try {
-      const s = await graphApi.stats();
-      setStats(s);
-    } catch {}
+    try { setStats(await graphApi.stats()); } catch {}
   }, []);
 
   const fetchNodes = useCallback(async () => {
@@ -33,20 +61,16 @@ export default function GraphExplorePage() {
       const data = await graphApi.nodes(params);
       setNodes(data.nodes || []);
       setTotal(data.total || 0);
-    } catch {} finally {
-      setLoading(false);
-    }
+    } catch {} finally { setLoading(false); }
   }, [searchQ, filterType, offset, limit]);
 
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
-
-  useEffect(() => {
-    fetchNodes();
-  }, [fetchNodes]);
+  useEffect(() => { fetchStats(); }, [fetchStats]);
+  useEffect(() => { fetchNodes(); }, [fetchNodes]);
 
   const handleSelectNode = async (nodeId: string) => {
+    setLoadingDetail(true);
+    setSelectedNode(null);
+    setNeighborhood(null);
     try {
       const [detail, neigh] = await Promise.all([
         graphApi.node(nodeId),
@@ -54,7 +78,7 @@ export default function GraphExplorePage() {
       ]);
       setSelectedNode(detail);
       setNeighborhood(neigh);
-    } catch {}
+    } catch {} finally { setLoadingDetail(false); }
   };
 
   const totalPages = Math.ceil(total / limit);
@@ -62,124 +86,124 @@ export default function GraphExplorePage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>
+        <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--text)" }}>
           图谱探索
         </h1>
         <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
-          {stats ? `${stats.nodes_total} 个节点 · ${stats.edges_total} 条边` : "探索知识图谱"}
+          {stats
+            ? `${stats.nodes_total.toLocaleString()} 个节点 · ${stats.edges_total.toLocaleString()} 条边`
+            : "知识图谱节点与关系"}
         </p>
       </div>
 
-      {/* Search and filter bar */}
+      {/* Search + filter */}
       <div className="flex gap-3">
         <input
           type="text"
           value={searchQ}
           onChange={(e) => { setSearchQ(e.target.value); setOffset(0); }}
-          placeholder="按节点名称搜索..."
-          className="flex-1 px-4 py-2.5 rounded-lg text-sm border"
-          style={{
-            background: "var(--bg-card)",
-            borderColor: "var(--border)",
-            color: "var(--text)",
-          }}
+          placeholder="搜索节点名称..."
+          className="input flex-1"
+          style={{ height: "40px", padding: "0 14px" }}
         />
         <select
           value={filterType}
           onChange={(e) => { setFilterType(e.target.value); setOffset(0); }}
-          className="px-4 py-2.5 rounded-lg text-sm border"
-          style={{
-            background: "var(--bg-card)",
-            borderColor: "var(--border)",
-            color: "var(--text)",
-          }}
+          className="input"
+          style={{ width: "140px", height: "40px", padding: "0 12px" }}
         >
           {NODE_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t || "全部类型"}
-            </option>
+            <option key={t} value={t}>{t || "全部类型"}</option>
           ))}
         </select>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Node list panel */}
-        <div className="lg:col-span-1 space-y-4">
-          <div
-            className="rounded-xl border overflow-hidden"
-            style={{ background: "var(--bg-card)", borderColor: "var(--border)" }}
-          >
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        {/* Node list */}
+        <div className="lg:col-span-1">
+          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
             <div
-              className="px-4 py-3 border-b text-sm font-medium"
-              style={{ borderColor: "var(--border)", color: "var(--text)" }}
+              className="px-4 py-3 flex items-center justify-between"
+              style={{ borderBottom: "1px solid var(--border-light)" }}
             >
-              节点 {total > 0 && `(${total})`}
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-faint)", letterSpacing: "0.07em" }}>
+                节点
+              </span>
+              {total > 0 && (
+                <span className="text-xs" style={{ color: "var(--text-faint)", fontFamily: "var(--font-mono)" }}>
+                  {total}
+                </span>
+              )}
             </div>
 
             {loading && (
-              <div className="px-4 py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+              <div className="px-4 py-8 text-center text-sm" style={{ color: "var(--text-faint)" }}>
                 加载中...
               </div>
             )}
 
             {!loading && nodes.length === 0 && (
-              <div className="px-4 py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>
-                {stats?.nodes_total === 0
-                  ? "暂无图谱数据，请先导入 Obsidian 笔记库。"
-                  : "没有匹配的节点。"}
+              <div className="px-4 py-10 text-center">
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  {stats?.nodes_total === 0
+                    ? "尚无图谱数据，请先导入笔记库"
+                    : "没有匹配的节点"}
+                </p>
               </div>
             )}
 
-            {!loading &&
-              nodes.map((n: any) => (
+            {!loading && nodes.map((n: any) => {
+              const isSelected = selectedNode?.node?.id === n.id;
+              return (
                 <button
                   key={n.id}
                   onClick={() => handleSelectNode(n.id)}
-                  className="w-full text-left px-4 py-3 border-b transition-colors last:border-b-0"
+                  className="w-full text-left px-4 py-3 transition-colors"
                   style={{
-                    borderColor: "var(--border)",
-                    background: selectedNode?.node?.id === n.id ? "var(--primary-subtle)" : "transparent",
+                    borderBottom: "1px solid var(--border-light)",
+                    background: isSelected ? "var(--primary-subtle)" : "transparent",
                   }}
+                  onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; }}
+                  onMouseLeave={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                 >
                   <div className="flex items-center gap-2">
-                    <span
-                      className="text-xs px-1.5 py-0.5 rounded"
-                      style={{ background: "var(--bg)", color: "var(--text-muted)" }}
-                    >
-                      {n.node_type}
-                    </span>
+                    <NodeTypePill type={n.node_type} />
                     <span className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>
                       {n.label}
                     </span>
                   </div>
                   {n.metadata?.relative_path && (
-                    <div className="text-xs mt-1 truncate" style={{ color: "var(--text-muted)" }}>
+                    <div className="text-xs mt-1 truncate" style={{ color: "var(--text-faint)" }}>
                       {n.metadata.relative_path}
                     </div>
                   )}
                 </button>
-              ))}
+              );
+            })}
 
-            {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-2.5" style={{ borderColor: "var(--border)" }}>
+              <div
+                className="flex items-center justify-between px-4 py-2.5 text-xs"
+                style={{ borderTop: "1px solid var(--border-light)", color: "var(--text-faint)" }}
+              >
                 <button
                   onClick={() => setOffset(Math.max(0, offset - limit))}
                   disabled={offset === 0}
-                  className="text-xs px-3 py-1 rounded transition-colors disabled:opacity-30"
-                  style={{ color: "var(--primary)" }}
+                  className="btn-secondary text-xs"
+                  style={{ padding: "3px 10px" }}
                 >
                   上一页
                 </button>
-                <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  {currentPage} / {totalPages}
-                </span>
+                <span style={{ fontFamily: "var(--font-mono)" }}>{currentPage} / {totalPages}</span>
                 <button
                   onClick={() => setOffset(offset + limit)}
                   disabled={offset + limit >= total}
-                  className="text-xs px-3 py-1 rounded transition-colors disabled:opacity-30"
-                  style={{ color: "var(--primary)" }}
+                  className="btn-secondary text-xs"
+                  style={{ padding: "3px 10px" }}
                 >
                   下一页
                 </button>
@@ -190,55 +214,74 @@ export default function GraphExplorePage() {
 
         {/* Detail panel */}
         <div className="lg:col-span-2 space-y-4">
-          {!selectedNode ? (
+          {loadingDetail && (
+            <div className="card flex items-center justify-center py-16">
+              <span className="text-sm" style={{ color: "var(--text-faint)" }}>加载节点详情...</span>
+            </div>
+          )}
+
+          {!loadingDetail && !selectedNode && (
             <div
-              className="rounded-xl border p-12 text-center"
-              style={{ background: "var(--bg-card)", borderColor: "var(--border)" }}
+              className="card flex flex-col items-center justify-center py-20 text-center"
             >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: "var(--bg-input)", color: "var(--text-faint)", fontSize: "18px" }}
+              >
+                ◎
+              </div>
               <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                选择一个节点以查看详情和邻居关系
+                从左侧选择一个节点
+              </p>
+              <p className="text-xs mt-1" style={{ color: "var(--text-faint)" }}>
+                查看详情、来源路径和邻居关系
               </p>
             </div>
-          ) : (
+          )}
+
+          {!loadingDetail && selectedNode && (
             <>
-              {/* Node detail */}
-              <div
-                className="rounded-xl border p-6"
-                style={{ background: "var(--bg-card)", borderColor: "var(--border)" }}
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <span
-                    className="text-xs px-2 py-0.5 rounded"
-                    style={{ background: "var(--primary-subtle)", color: "var(--primary)" }}
-                  >
-                    {selectedNode.node.node_type}
-                  </span>
-                  <h3 className="font-semibold" style={{ color: "var(--text)" }}>
+              {/* Node detail card */}
+              <div className="card">
+                <div className="flex items-center gap-3 mb-5">
+                  <NodeTypePill type={selectedNode.node.node_type} />
+                  <h3 className="font-semibold text-base" style={{ color: "var(--text)" }}>
                     {selectedNode.node.label}
                   </h3>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="space-y-3 text-sm">
                   <div>
-                    <span style={{ color: "var(--text-muted)" }}>节点标识</span>
-                    <div className="font-mono text-xs mt-0.5 break-all" style={{ color: "var(--text)" }}>
+                    <div className="text-xs uppercase tracking-wide mb-1" style={{ color: "var(--text-faint)", letterSpacing: "0.07em" }}>
+                      节点标识
+                    </div>
+                    <div
+                      className="text-xs px-3 py-2 rounded-md break-all"
+                      style={{ background: "var(--bg-input)", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}
+                    >
                       {selectedNode.node.stable_key}
                     </div>
                   </div>
+
                   {selectedNode.node.metadata?.relative_path && (
                     <div>
-                      <span style={{ color: "var(--text-muted)" }}>源文件路径</span>
-                      <div className="text-xs mt-0.5" style={{ color: "var(--text)" }}>
+                      <div className="text-xs uppercase tracking-wide mb-1" style={{ color: "var(--text-faint)", letterSpacing: "0.07em" }}>
+                        源文件
+                      </div>
+                      <div className="text-xs" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
                         {selectedNode.node.metadata.relative_path}
                       </div>
                     </div>
                   )}
+
                   {selectedNode.node.content_snippet && (
-                    <div className="col-span-2">
-                      <span style={{ color: "var(--text-muted)" }}>内容预览</span>
+                    <div>
+                      <div className="text-xs uppercase tracking-wide mb-1" style={{ color: "var(--text-faint)", letterSpacing: "0.07em" }}>
+                        内容预览
+                      </div>
                       <div
-                        className="text-xs mt-0.5 p-3 rounded-lg leading-relaxed"
-                        style={{ background: "var(--bg)", color: "var(--text)" }}
+                        className="text-xs px-3 py-2.5 rounded-md leading-relaxed"
+                        style={{ background: "var(--bg-input)", color: "var(--text-muted)" }}
                       >
                         {selectedNode.node.content_snippet}
                       </div>
@@ -246,35 +289,31 @@ export default function GraphExplorePage() {
                   )}
                 </div>
 
-                {/* Edges summary */}
-                <div className="mt-4 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-                  <div className="flex gap-4 text-xs">
-                    <span style={{ color: "var(--text-muted)" }}>
-                      出边：{selectedNode.outgoing_edges?.length || 0}
-                    </span>
-                    <span style={{ color: "var(--text-muted)" }}>
-                      入边：{selectedNode.incoming_edges?.length || 0}
-                    </span>
-                  </div>
+                <div
+                  className="flex gap-6 mt-5 pt-4 text-xs"
+                  style={{ borderTop: "1px solid var(--border-light)", color: "var(--text-faint)" }}
+                >
+                  <span>出边 <strong style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{selectedNode.outgoing_edges?.length || 0}</strong></span>
+                  <span>入边 <strong style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{selectedNode.incoming_edges?.length || 0}</strong></span>
                 </div>
               </div>
 
               {/* Neighborhood */}
               {neighborhood && (
-                <div
-                  className="rounded-xl border p-6"
-                  style={{ background: "var(--bg-card)", borderColor: "var(--border)" }}
-                >
-                  <h4 className="font-semibold text-sm mb-4" style={{ color: "var(--text)" }}>
-                    邻居关系（{neighborhood.neighbor_count} 个邻居 · {neighborhood.edge_count} 条边）
-                  </h4>
+                <div className="card">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-faint)", letterSpacing: "0.07em" }}>
+                      邻居关系
+                    </h4>
+                    <span className="text-xs" style={{ color: "var(--text-faint)", fontFamily: "var(--font-mono)" }}>
+                      {neighborhood.neighbor_count} 个邻居 · {neighborhood.edge_count} 条边
+                    </span>
+                  </div>
 
                   {neighborhood.neighbors.length === 0 ? (
-                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      此节点暂无连接。
-                    </p>
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>此节点暂无连接</p>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {neighborhood.edges?.map((e: any, i: number) => {
                         const srcLabel =
                           e.source_id === selectedNode.node.id
@@ -287,22 +326,18 @@ export default function GraphExplorePage() {
                         return (
                           <div
                             key={e.id || i}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
-                            style={{ background: "var(--bg)" }}
+                            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs"
+                            style={{ background: "var(--bg-input)" }}
                           >
                             <span
-                              className="text-xs px-1.5 py-0.5 rounded font-medium"
+                              className="badge flex-shrink-0"
                               style={{ background: "var(--primary-subtle)", color: "var(--primary)" }}
                             >
                               {e.relation}
                             </span>
-                            <span className="truncate" style={{ color: "var(--text)" }}>
-                              {srcLabel}
-                            </span>
-                            <span style={{ color: "var(--text-muted)" }}>--</span>
-                            <span className="truncate" style={{ color: "var(--text)" }}>
-                              {tgtLabel}
-                            </span>
+                            <span className="truncate font-medium" style={{ color: "var(--text)" }}>{srcLabel}</span>
+                            <span style={{ color: "var(--text-faint)", flexShrink: 0 }}>→</span>
+                            <span className="truncate" style={{ color: "var(--text-muted)" }}>{tgtLabel}</span>
                           </div>
                         );
                       })}
