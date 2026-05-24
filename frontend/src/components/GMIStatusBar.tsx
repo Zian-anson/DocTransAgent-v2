@@ -19,8 +19,12 @@ const FRIENDLY_NAMES: Record<string, string> = {
   "qwen3-embedding-8b":                   "Qwen3-Emb",
 };
 
+type HealthStatus = {
+  models?: Record<string, string>;
+};
+
 export default function GMIStatusBar() {
-  const [health, setHealth] = useState<any>(null);
+  const [health, setHealth] = useState<HealthStatus | null>(null);
 
   useEffect(() => {
     fetch("/api/health").then((r) => r.json()).then(setHealth).catch(() => {});
@@ -30,20 +34,20 @@ export default function GMIStatusBar() {
     <div
       className="flex items-center gap-4 px-5 py-2 text-xs"
       style={{
-        background: "var(--sidebar-bg)",
-        borderBottom: "1px solid var(--sidebar-border)",
+        background: "oklch(100% 0 0 / 0.62)",
+        backdropFilter: "blur(12px)",
+        borderBottom: "1px solid var(--border)",
         height: "36px",
-        marginLeft: "224px",
-        color: "var(--sidebar-text-dim)",
+        color: "var(--text-muted)",
       }}
     >
       <div className="flex items-center gap-1.5">
-        <span className="w-1.5 h-1.5 rounded-full" style={{ background: health ? "var(--success)" : "var(--text-faint)" }} />
-        <span style={{ color: "var(--sidebar-text-dim)", fontWeight: 500 }}>GMI Cloud</span>
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: health ? "var(--primary)" : "var(--text-faint)" }} />
+        <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>GMI Cloud</span>
       </div>
       <div
         className="w-px h-3"
-        style={{ background: "var(--sidebar-border)" }}
+        style={{ background: "var(--border)" }}
       />
       <div className="flex items-center gap-4">
         {MODEL_ROLES.map(({ key, role }) => {
@@ -51,12 +55,12 @@ export default function GMIStatusBar() {
           const name = FRIENDLY_NAMES[modelId] || (modelId ? modelId.split("/").pop() : "—");
           return (
             <div key={key} className="flex items-center gap-1.5">
-              <span style={{ color: "var(--sidebar-text-dim)" }}>{role}</span>
+              <span style={{ color: "var(--text-muted)" }}>{role}</span>
               <span
                 className="px-1.5 py-0.5 rounded"
                 style={{
-                  background: "var(--sidebar-active)",
-                  color: "oklch(75% 0.040 168)",
+                  background: "var(--primary-subtle)",
+                  color: "var(--sidebar-active-text)",
                   fontFamily: "var(--font-mono)",
                   fontSize: "10px",
                 }}
@@ -68,7 +72,7 @@ export default function GMIStatusBar() {
         })}
       </div>
       {health && (
-        <div className="ml-auto flex items-center gap-1" style={{ color: "oklch(60% 0.040 168)" }}>
+        <div className="ml-auto flex items-center gap-1" style={{ color: "var(--primary)" }}>
           API Online
         </div>
       )}

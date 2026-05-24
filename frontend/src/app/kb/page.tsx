@@ -71,7 +71,7 @@ export default function KBPage() {
 
       {/* Results */}
       <div className="space-y-3">
-        {results.map((r, i) => (
+        {results.map((r) => (
           <div key={r.chunk_id} className="card hover:border-indigo-500/30 transition-colors">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">

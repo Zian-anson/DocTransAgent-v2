@@ -67,8 +67,6 @@ export const qaApi = {
       body: JSON.stringify({ question, session_id: sessionId, top_k: topK }),
     }),
   askStream: (question: string, sessionId = "default", topK = 5) => {
-    const params = new URLSearchParams({ q: question, session_id: sessionId, top_k: String(topK) });
-    // Use POST for streaming via fetch with SSE reader
     return fetch(`${BASE_URL}/api/qa/ask/stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

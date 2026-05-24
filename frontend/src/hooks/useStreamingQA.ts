@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { qaApi } from "@/lib/api";
 
 interface Message {
@@ -20,7 +20,6 @@ interface Citation {
 export function useStreamingQA(sessionId = "default") {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
 
   const ask = useCallback(
     async (question: string) => {

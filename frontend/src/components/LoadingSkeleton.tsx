@@ -27,6 +27,8 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
   );
 }
 
+const chatSkeletonWidths = [58, 66, 48];
+
 export function ChatSkeleton() {
   return (
     <div className="space-y-4 animate-pulse">
@@ -35,7 +37,7 @@ export function ChatSkeleton() {
           <div
             className="rounded-2xl px-4 py-3"
             style={{
-              width: `${40 + Math.random() * 30}%`,
+              width: `${chatSkeletonWidths[i]}%`,
               background: isUser ? "var(--primary)" : "var(--bg-card)",
             }}
           >

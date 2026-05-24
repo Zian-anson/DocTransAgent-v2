@@ -89,14 +89,20 @@ export default function Sidebar() {
   return (
     <aside
       className="fixed left-0 top-0 h-screen w-56 flex flex-col z-40"
-      style={{ background: "var(--sidebar-bg)" }}
+      style={{
+        background: "var(--sidebar-bg)",
+        borderRight: "1px solid var(--sidebar-border)",
+      }}
     >
-      {/* Brand */}
       <div className="px-5 pt-6 pb-5" style={{ borderBottom: "1px solid var(--sidebar-border)" }}>
         <Link href="/" className="flex items-center gap-3 group" style={{ textDecoration: "none" }}>
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: "var(--primary)", color: "oklch(98% 0.006 168)" }}
+            style={{
+              background: "var(--primary)",
+              color: "white",
+              boxShadow: "0 6px 16px oklch(52% 0.085 210 / 0.16)",
+            }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M7 1.5L2.5 4v5.5L7 12l4.5-2.5V4L7 1.5z" />
@@ -104,7 +110,7 @@ export default function Sidebar() {
             </svg>
           </div>
           <div>
-            <div className="text-sm font-semibold leading-snug" style={{ color: "oklch(92% 0.008 168)" }}>
+            <div className="text-sm font-semibold leading-snug" style={{ color: "var(--text)" }}>
               DocTransAgent
             </div>
             <div className="text-xs" style={{ color: "var(--sidebar-text-dim)" }}>
@@ -114,7 +120,6 @@ export default function Sidebar() {
         </Link>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 px-2.5 py-4 space-y-0.5 overflow-y-auto">
         <div className="px-2.5 mb-3">
           <span className="text-xs font-semibold" style={{ color: "var(--sidebar-text-dim)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
@@ -130,14 +135,14 @@ export default function Sidebar() {
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150"
               style={{
                 background: isActive ? "var(--sidebar-active)" : "transparent",
-                color: isActive ? "oklch(93% 0.030 168)" : "var(--sidebar-text)",
+                color: isActive ? "var(--sidebar-active-text)" : "var(--sidebar-text)",
                 textDecoration: "none",
-                borderLeft: isActive ? "2px solid var(--primary-light)" : "2px solid transparent",
+                boxShadow: isActive ? "inset 0 0 0 1px var(--primary-dim)" : "none",
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
                   (e.currentTarget as HTMLElement).style.background = "var(--sidebar-hover)";
-                  (e.currentTarget as HTMLElement).style.color = "oklch(85% 0.010 168)";
+                  (e.currentTarget as HTMLElement).style.color = "var(--text)";
                 }
               }}
               onMouseLeave={(e) => {
@@ -149,7 +154,7 @@ export default function Sidebar() {
             >
               <span
                 className="flex-shrink-0"
-                style={{ color: isActive ? "var(--primary-light)" : "var(--sidebar-icon)" }}
+                style={{ color: isActive ? "var(--primary)" : "var(--sidebar-icon)" }}
               >
                 {item.icon}
               </span>
@@ -159,10 +164,15 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Footer */}
       <div className="px-5 py-4" style={{ borderTop: "1px solid var(--sidebar-border)" }}>
         <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "var(--success)" }} />
+          <span
+            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+            style={{
+              background: "var(--primary)",
+              boxShadow: "0 0 0 4px var(--primary-subtle)",
+            }}
+          />
           <span className="text-xs" style={{ color: "var(--sidebar-text-dim)" }}>系统运行正常</span>
         </div>
       </div>
